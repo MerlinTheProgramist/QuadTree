@@ -11,7 +11,7 @@ from typing import List
 from typing import Callable
 
 from sys import argv
-
+import argparse
 
 def empty(x):
     pass
@@ -69,6 +69,8 @@ imgBox = None
 img = None
 pixelated = None
 
+show_conv = False
+
 def update_thresh(x):
     global imgBox, pixelated, THRESH, img
     THRESH = x
@@ -82,11 +84,12 @@ def update_depth(x):
     imgBox.show(pixelated)
     #print("CALC_END")
 
-def main():
+def main(image_path):
     global imgBox, img, pixelated
 
     WINDOW = "imagePixelate"
-    cv2.namedWindow(WINDOW)
+    cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW, 800, 600)
 
 
     img = cv2.imread(argv[1])
@@ -94,8 +97,8 @@ def main():
 
     imgBox = ArtTree(Rect(0,0,img.shape[1],img.shape[0]))
 
-    cv2.createTrackbar("threashold",WINDOW,50,255,update_thresh)
-    cv2.createTrackbar("minsize",WINDOW,3,10,update_depth)
+    cv2.createTrackbar("threashold",WINDOW,30,60,update_thresh)
+    cv2.createTrackbar("minsize",WINDOW,4,10,update_depth)
 
     imgBox.update_img(img, MINSIZE,THRESH)#, standard_deviation)
     imgBox.show(pixelated)
@@ -106,7 +109,7 @@ def main():
         if k == 27:
             break
 
-        cv2.imshow(WINDOW,np.concatenate((img,pixelated),axis=1))
+        cv2.imshow(WINDOW,np.concatenate((img,pixelated),axis=1) if show_conv else pixelated)
         cv2.waitKey(1)
 
 
@@ -114,4 +117,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("image_path", help="path to image that you want to convert")
+    parser.add_argument('-p', action='store_true',help="show image before and after")
+
+    args = parser.parse_args()
+    image = cv2.imread(args.image_path)
+
+    show_conv = args.p
+
+    main(image)
