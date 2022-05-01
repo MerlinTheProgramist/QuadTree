@@ -9,14 +9,19 @@ class TreeBranch(Generic[T]):
     rect:Rect
     subdivision:int
 
-    def __init__(self:T, rect:Rect, subdivision:int):
-        self.rect = rect
-        # self.state = state
+    def __init__(self:T, rect:Rect=None,h=0,w=0, subdivision:int=2):
+
+        if rect==None:
+            self.rect = Rect(0,0,h,w)
+        else:
+            self.rect = rect
 
         self.children:List[T] = []
         self.subdivision = subdivision
 
     def subdivide(self:T,n:int=2, **class_args):
+        if self.children: return
+
         size = Vector2(m.ceil(self.rect.w / n), m.ceil(self.rect.h / n))
 
         for h in range(n):

@@ -1,19 +1,26 @@
+#! /usr/bin/env python3
+
 import pygame as pg
 from random import randint
+import numpy as np
 
 from pygame import Vector2, Rect
-from typing import List, Generic, TypeVar
+from typing import List, Generic, TypeVar, Tuple
+
+import traceback
 
 from sys import argv
-from nnfs.datasets import spiral_data
-import nnfs
-nnfs.init()
+
+pg.init()
 
 from classes import TreeBranch
 
 WIDTH = 1000
 HEIGHT = 1000
 FPS = 60
+
+FONT = pg.font.Font(None,50)
+
 
 class PointTree(TreeBranch):
     points:List[Vector2]
@@ -61,18 +68,24 @@ class PointTree(TreeBranch):
         for p in self.points:
             pg.draw.circle(screen, (255,0,255), p, 2)
 
-def setup(n:int):
+        for c in self.children:
+            c.show(screen)
+
+def setup(n:int, s):
     world = pg.display.set_mode([WIDTH, HEIGHT])
     clock = pg.time.Clock()
 
-    boundary = PointTree(Rect(0,0, WIDTH, HEIGHT),0,n, max_cap = 2)
+    boundary = PointTree(Rect(0,0, WIDTH, HEIGHT),n, max_cap = 2)
     
-    # data = spiral_data(samples=100,classes=1)
+    X,y = spiral_data(N=10000,D=2,K=3)
+    
     # print(data)
-    # for p in data:
-    #     print(p)
-    #     boundary.insert(Vector2())
-    
+    for pos in X:
+        try:
+            boundary.insert(Vector2(int((pos[0]+1)*WIDTH/2),int((pos[1]+1)*HEIGHT/2)))
+        except Exception:
+            traceback.print_exc()
+            
     
     selectPos:Vector2 = Vector2(0,0)
     selecting:bool = False
@@ -113,6 +126,7 @@ def setup(n:int):
             boundary.query(selectBox, out=selected)
             for p in selected:
                 pg.draw.circle(world, (255,255,0), p, 3)
+                world.blit(FONT.render(str(len(selected)),True,(0,200,30)),(30,30))
 
         
 
@@ -122,12 +136,41 @@ def setup(n:int):
         clock.tick(FPS)
 
 
+def spiral_data(N:int,D:int,K:int):
+    """generate spiral points formation
+
+    Args:
+        N (int): number of points per class
+        D (int): dimensionality
+        K (iont): number of classes
+
+    Returns:
+         output X,Y Lists
+    """
+    X = np.zeros((N*K,D)) # data matrix (each row = single example)
+    y = np.zeros(N*K, dtype='uint8') # class labels
+    for j in range(K):
+        ix = range(N*j,N*(j+1))
+        r = np.linspace(0.0,1,N) # radius
+        t = np.linspace(j*4,(j+1)*4,N) + np.random.randn(N)*0.2 # theta
+        X[ix] = np.c_[r*np.sin(t), r*np.cos(t)]
+        y[ix] = j
+    
+    return [X,y]
+
 if __name__ == "__main__":
     n = 2
+
+    spiral = False
+
     if len(argv)>=2:
         try:
             n = int(argv[1])
         except:
             print(f"using default subdivision resolution {n}") 
-        print(n)
-    setup(n)
+
+        if("spiral" in argv):
+            spiral = True
+
+        
+    setup(n,spiral)
