@@ -10,7 +10,7 @@ class TreeBranch(Generic[T]):
     subdivision:int
 
     def __init__(self:T, rect:Rect=None,h=0,w=0, subdivision:int=2):
-
+        
         if rect==None:
             self.rect = Rect(0,0,h,w)
         else:

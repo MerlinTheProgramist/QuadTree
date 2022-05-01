@@ -20,6 +20,11 @@ class ArtTree(TreeBranch):
     colour:List[int]
     depth:int
     def __init__(self,*args, depth:int=0):
+        """Create QuadTree based image "blurrer"
+
+        Args:
+            depth (int, optional): . Defaults to 0.
+        """
         super().__init__(*args)
         self.depth = depth
         self.colour = (0,0,0)
@@ -69,13 +74,13 @@ def update_thresh(x):
     THRESH = x
     imgBox.update_img(img, MINSIZE,THRESH)#,standard_deviation)
     imgBox.show(pixelated)
-    print("CALC_END")
+    #print("CALC_END")
 def update_depth(x):
     global imgBox, pixelated,MINSIZE,img
     MINSIZE = x
     imgBox.update_img(img, MINSIZE,THRESH)#,standard_deviation)
     imgBox.show(pixelated)
-    print("CALC_END")
+    #print("CALC_END")
 
 def main():
     global imgBox, img, pixelated
@@ -87,7 +92,7 @@ def main():
     img = cv2.imread(argv[1])
     pixelated = np.zeros(img.shape,dtype=np.uint8)
 
-    imgBox = ArtTree(Rect(0,0,img.shape[1],img.shape[0]),2)
+    imgBox = ArtTree(Rect(0,0,img.shape[1],img.shape[0]))
 
     cv2.createTrackbar("threashold",WINDOW,50,255,update_thresh)
     cv2.createTrackbar("minsize",WINDOW,3,10,update_depth)
