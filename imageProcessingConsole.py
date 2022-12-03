@@ -17,21 +17,33 @@ def draw_text(image:np.ndarray, max_deph:int, threshold:int, scale:int=1):
     #cv2.waitKey(1)
     art_tree.update_img(image,max_deph,threshold)
 
-    out_img = np.zeros((w,h,3))
+    out_img = np.zeros((w,h,3),np.uint8)
     art_tree.show(out_img)
 
+    #cv2.imshow("img", out_img)
+    #cv2.waitKey(0)
 
     width = int(w/scale)
     height = int(h/scale)
-    out_img = cv2.resize(out_img,(height, width))
 
-    for row in out_img:
+    WINDOW = "RESIZED"
+    cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW, 800, 600)
+    resized = cv2.resize(out_img,(height, width),interpolation = cv2.INTER_NEAREST)
+
+    cv2.imshow(WINDOW,resized)
+    cv2.waitKey(0)
+
+    print(resized)
+
+    for row in resized:
         for char in row:
 
             print(color('██', fore=(char[2],char[1],char[0]), back=(0, 0, 0)), end='')
         print()
 
 
+    input()
 
 
 if __name__ == "__main__":
@@ -40,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("max_deph", help="max deph of the quad tree",type=int)
     parser.add_argument("threshold", help="smaller threshold will cause more detailed output image",type=int)
 
-    parser.add_argument("-s",'--scale',type=int)
+    parser.add_argument("-s",'--scale',type=int,default=1)
 
 
     args = parser.parse_args()

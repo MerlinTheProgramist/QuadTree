@@ -22,8 +22,6 @@ G_FORCE = 0.5
 #colors
 BACKGROUND = (0,0,0)
 
-
-
 def debug(func:Callable):
     key = False
     while not key:
@@ -36,9 +34,10 @@ class FillTree(TreeBranch):
 
     rect_corners:List[Vector2]
 
+    update_req:bool
+
     def __init__(self,*args,state:bool=True, max_deph:int=10):
         super().__init__(*args)
-        self.state = state
         self.max_deph = max_deph
 
         self.rect_corners = [
@@ -48,8 +47,11 @@ class FillTree(TreeBranch):
             self.rect.topright
         ]
 
+        self.set_state(state)
+
     def set_state(self, state:bool):
         self.state = state
+        self.update_req = True
 
     def rectangle_hole(self, pos:Vector2, r:int):
         # if already holled
@@ -65,6 +67,7 @@ class FillTree(TreeBranch):
         # if  fully in bounds of the rect
         if c_dist_x+self.rect.width/2 <= r and c_dist_y+self.rect.height/2 <= r:
             self.set_state(False)
+            self.children = list()
             return
 
         # if max deph exited holl this:
@@ -80,7 +83,7 @@ class FillTree(TreeBranch):
         for child in self.children:
             child.rectangle_hole(pos,r)
 
-    def circle_hole(self, pos:Vector2, r:int):
+    def circle_hole(self, pos:Vector2, r:int,*_, screen:pg.Surface=None):
         """generate circle hole in terrain
 
         Args:
@@ -89,11 +92,19 @@ class FillTree(TreeBranch):
         """
         global world
 
-        # if already holled
-        if(not self.state and not self.children): return
 
+        #DEBBUGING
+        if DEBUG and screen:
+            pg.draw.rect(screen, (255,0,255), self.rect, width=2)
+
+        # if already holled
+        if(not self.state and not self.children): 
+            return
+
+        
         # if max deph exited holl this:
         if (self.max_deph==0):
+            self.set_state(False)
             return
 
         dist_x = abs(pos.x - self.rect.centerx)
@@ -117,11 +128,12 @@ class FillTree(TreeBranch):
 
         # check for all children
         for child in self.children:
-            child.circle_hole(pos,r)
+            child.circle_hole(pos,r, screen=screen)
 
         # if all children have the same state, remove them and set that state to self
         if all((c.state==self.children[0].state and (not c.children)) for c in self.children):
             self.state = self.children[0].state
+            #self.update_req = True
             self.children = list()
 
     def terrain_form_img(self,img:np.ndarray):
@@ -161,73 +173,94 @@ class FillTree(TreeBranch):
             screen (Surface): pygame surface
         """
 
-        if self.children:
+        if not self.update_req:
+            return
+            
+        self.update_req=False
+
+        if not self.children:
+            if self.state:
+                pg.draw.rect(screen, (0,200,40), self.rect)
+                return
+            else: 
+                pg.draw.rect(screen, BACKGROUND, self.rect)
+        else:
             for child in self.children:
                 child.show(screen)
 
-        if self.state:
-            pg.draw.rect(screen, (0,200,40), self.rect)
-        #else:
-        #    pg.draw.rect(screen, (0,0,0), self.rect)
-
-        if DEBUG: pg.draw.rect(screen, (255,255,255), self.rect, 1)
+        #if DEBUG: pg.draw.rect(screen, (255,255,255), self.rect, 1)
         #super().show(screen)
 
-class Gradade():
+class Granade():
     render_radious:int=3
     vel:Vector2 = Vector2(0,0)
     color:tuple=(200,40,40)
-    def __init__(self,pos:Vector2,vel:Vector2, explosion:int):
+    def __init__(self,pos:Vector2,vel:Vector2, explosion:int, time_s:float):
         self.explosion:int = explosion
         self.pos:Vector2 = pos
         self.acc:Vector2 = vel
 
+        self.time_s = time_s
+
     def step(self):
-        self.vel = Vector2(0,1)*G_FORCE
-
-
+        self.vel += Vector2(0,1)*G_FORCE;
+        self.pos += vel;
+        
+        if(collisin()):
+            self.pos-=vel;
+            vel=vel*-0.5;
+    
+    def collisin(self)->bool:
+        if():
+            pass         
+            
 
 def many(it, num):
     it = iter(it)
     return all(any(it) for _ in range(num))
 
-def main(map_path=None):
+def main(fg_path:str, *_, scale=1, bg:pg.Surface=None):
     global world
+ 
 
     world = pg.display.set_mode([WIDTH, HEIGHT])
     terrain_sur = pg.Surface((WIDTH,HEIGHT))
     clock = pg.time.Clock()
+    
+    # if no background passed, generate blue background
+    if bg==None:
+        bg = pg.Surface((WIDTH,HEIGHT)); bg.fill([20,50,200])
+    fg = pg.image.load(fg_path);fg.convert()
 
-    mapPoints = []
-    mapBox = FillTree(Rect(0,0, WIDTH, HEIGHT),2, max_deph=12)
-
-    if(map_path):
-        mapBox.terrain_form_img(img=cv2.imread(map_path))
+    mapBox = FillTree(Rect(0,0, WIDTH, HEIGHT),2, max_deph=10)    
+    mapBox.terrain_form_img(img= cv2.resize(cv2.imread(fg_path),(0,0), fx=scale,fy=scale) )
 
     explosion_r = 10
 
-
-    rerender_terr=True
+    #rerender_terr=True
     while True:
-        world.fill(BACKGROUND)
+        world.blit(bg,(0,0))
+        
+        mapBox.show(terrain_sur)
+        
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()
 
-            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                mapBox.circle_hole(Vector2(pg.mouse.get_pos()), explosion_r)
-                rerender_terr = True
-            elif event.type == pg.MOUSEBUTTONDOWN and event.button == 3:
-                mapBox.rectangle_hole(Vector2(pg.mouse.get_pos()), explosion_r)
-                rerender_terr = True
+            elif event.type == pg.MOUSEBUTTONDOWN:# and event.button == 1:
+                mapBox.circle_hole(Vector2(pg.mouse.get_pos()), explosion_r, screen=terrain_sur)
+                print("Granede!")
+                #rerender_terr = True
+            # elif event.type == pg.MOUSEBUTTONDOWN and event.button == 3:
+            #     mapBox.rectangle_hole(Vector2(pg.mouse.get_pos()), explosion_r)
+                #rerender_terr = True
 
-        if rerender_terr:
-            terrain_sur.fill(BACKGROUND)
-            mapBox.show(terrain_sur)
-            rerender_terr = False
-
+        
+        #rerender_terr = False
+        world.fill(BACKGROUND)
         world.blit(terrain_sur,(0,0))
+        #terrain_sur.fill(BACKGROUND)
 
         pg.draw.circle(world, (255,0,255), pg.mouse.get_pos(), explosion_r,1)
 
@@ -237,12 +270,10 @@ def main(map_path=None):
 
 
 if __name__ == "__main__":
-    #parser = argparse.ArgumentParser(description='Process some integers.')
-    # parser.add_argument('integers', metavar='N', type=int, nargs='+',
-    #                     help='an integer for the accumulator')
-    #parser.add_argument('--sum', dest='accumulate', action='store_const', const=sum, default=max,
-    #                     help='sum the integers (default: find the max)')
+    parser = argparse.ArgumentParser(description='Make Terrain Map')
+    parser.add_argument('fg',type=str, help="path to imgae file from will generate map, where black (0,0,0) is background")
+    parser.add_argument('-bg', type=str, help="path to image of background, Default is blue sky")
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
-    main(map_path="./map1.png")
+    main(fg_path=args.fg, scale=2)
